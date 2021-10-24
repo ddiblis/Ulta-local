@@ -2,14 +2,17 @@
 from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures.thread import ThreadPoolExecutor
 from urllib.parse import urljoin
-import json
+# import json
 import re
 import time
 from itertools import repeat, chain
 
+import simplejson as json
 from tqdm import tqdm
 from requests import get
 from bs4 import BeautifulSoup as bs
+
+from sub import Product
 
 # Gets categories from main page
 def get_cats():
@@ -39,21 +42,15 @@ def get_subcats():
 def push_prod(item, link):
   base_url = "https://www.ulta.com/"
 
-  for retry in range(5):
-    rating = item.select_one("label.sr-only") or ""
-    price = item.select_one("span.regPrice") or item.select_one("span.pro-new-price")
-    brand = item.select_one("h4.prod-title") or item.select_one("h4.prod-title a")
-    ratingif = rating.text if rating else "No rating avaliable"
-    priceif = price.text.strip() if price else "No price found"
-    nameif = item.select_one("p.prod-desc a").text.strip() if item.select_one("p.prod-desc a") else ""
-    brandif = brand.text.strip() if brand else ""
-    imgif = item.select_one("div.quick-view-prod img").attrs["src"][:-3] if item.select_one("div.quick-view-prod img") else ""
-    urlif = urljoin(base_url, item.select_one("a").attrs["href"]) if item.select_one("a") else ""
-    if not imgif:
-      print(item.select_one("div.quick-view-prod img"))
-      print(link)
-    if imgif and brandif and nameif:
-      break
+  rating = item.select_one("label.sr-only") or ""
+  price = item.select_one("span.regPrice") or item.select_one("span.pro-new-price")
+  brand = item.select_one("h4.prod-title") or item.select_one("h4.prod-title a")
+  ratingif = rating.text if rating else "No rating avaliable"
+  priceif = price.text.strip() if price else "No price found"
+  nameif = item.select_one("p.prod-desc a").text.strip() if item.select_one("p.prod-desc a") else ""
+  brandif = brand.text.strip() if brand else ""
+  imgif = item.select_one("div.quick-view-prod img").attrs["src"][:-3] if item.select_one("div.quick-view-prod img") else ""
+  urlif = urljoin(base_url, item.select_one("a").attrs["href"]) if item.select_one("a") else ""
   return {
             # "parent-link": link,
             "link": urlif,
@@ -74,7 +71,8 @@ def get_prods():
       resp = get(link).text
       soup = bs(resp, "html.parser")
       items = soup.select("div.productQvContainer")
-      return [push_prod(i, link) for i in items]
+      # return [push_prod(i, link) for i in items]
+      return [Product(i) for i in items]
 
   for s in chain(*subs.values()):
       key = re.findall(r"m\/[\S]+\?", s)[0][2:-1]
@@ -92,7 +90,7 @@ def get_prods():
 def save_json():
   t0 = time.time()
   with open('data.json', 'w') as outfile:
-    json.dump(get_prods(), outfile, indent=4, ensure_ascii=False)
+    json.dump(get_prods(), outfile, indent=4, ensure_ascii=False, for_json=True)
   t1 = time.time()
   print(t1 - t0)
 
