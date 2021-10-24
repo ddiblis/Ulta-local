@@ -39,28 +39,6 @@ def get_subcats():
     prods[i[26:]] = raw
   return prods
 
-def push_prod(item, link):
-  base_url = "https://www.ulta.com/"
-
-  rating = item.select_one("label.sr-only") or ""
-  price = item.select_one("span.regPrice") or item.select_one("span.pro-new-price")
-  brand = item.select_one("h4.prod-title") or item.select_one("h4.prod-title a")
-  ratingif = rating.text if rating else "No rating avaliable"
-  priceif = price.text.strip() if price else "No price found"
-  nameif = item.select_one("p.prod-desc a").text.strip() if item.select_one("p.prod-desc a") else ""
-  brandif = brand.text.strip() if brand else ""
-  imgif = item.select_one("div.quick-view-prod img").attrs["src"][:-3] if item.select_one("div.quick-view-prod img") else ""
-  urlif = urljoin(base_url, item.select_one("a").attrs["href"]) if item.select_one("a") else ""
-  return {
-            # "parent-link": link,
-            "link": urlif,
-            "image": imgif,
-            "brand": brandif,
-            "name": nameif,
-            "price": priceif,
-            "rating": ratingif,
-          }
-
 def get_prods():
   subs = get_subcats()
   data = {}
@@ -71,7 +49,6 @@ def get_prods():
       resp = get(link).text
       soup = bs(resp, "html.parser")
       items = soup.select("div.productQvContainer")
-      # return [push_prod(i, link) for i in items]
       return [Product(i) for i in items]
 
   for s in chain(*subs.values()):

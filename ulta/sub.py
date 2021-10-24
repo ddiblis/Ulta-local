@@ -10,6 +10,9 @@ class ProductSchema(Schema):
     price = fields.Str()
     rating = fields.Str()
 
+    class Meta:
+        ordered = True
+
 
 class Product:
     base_url = "https://www.ulta.com/"
