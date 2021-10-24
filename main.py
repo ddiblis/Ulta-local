@@ -1,10 +1,11 @@
+#!/usr/bin/env python
 from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures.thread import ThreadPoolExecutor
 from urllib.parse import urljoin
 import json
 import re
 import time
-from itertools import repeat
+from itertools import repeat, chain
 
 from tqdm import tqdm
 from requests import get
@@ -51,12 +52,10 @@ def push_prod(item, link):
     if not imgif:
       print(item.select_one("div.quick-view-prod img"))
       print(link)
-      # with open('wtf.html') as f_:
-      #   f_.write(item.html())
     if imgif and brandif and nameif:
       break
   return {
-            "parent-link": link,
+            # "parent-link": link,
             "link": urlif,
             "image": imgif,
             "brand": brandif,
@@ -70,23 +69,23 @@ def get_prods():
   data = {}
   progress = tqdm()
 
-  for subcat in subs:
-      for s in subs[subcat]:
-          key = ""
-          arr = []
-          for n in range(15):
-              link = s + f"&No={n}000&Nrpp=200"
-              key = re.findall(r"m\/[\S]+\?", link)[0][2:-1]
-              resp = get(link).text
-              soup = bs(resp, "html.parser")
-              items = soup.select("div.productQvContainer")
-              with ThreadPoolExecutor(30) as pool:
-                  nref = list(pool.map(push_prod, items, repeat(link)))
-                  progress.update(len(nref))
-                  arr.extend(nref)
-              # for item in items:
-              #   arr.append(push_prod(item, link))
-          data[key] = arr
+  def run_chunk(n, s):
+      link = s + f"&No={n*100}&Nrpp=100"
+      resp = get(link).text
+      soup = bs(resp, "html.parser")
+      items = soup.select("div.productQvContainer")
+      return [push_prod(i, link) for i in items]
+
+  for s in chain(*subs.values()):
+      key = re.findall(r"m\/[\S]+\?", s)[0][2:-1]
+      with ThreadPoolExecutor(30) as pool:
+        arrs = pool.map(run_chunk, range(30), repeat(s))
+      output = []
+      for i in chain(*arrs):
+        if i not in output:
+          output.append(i)
+      progress.update(len(output))
+      data[key] = output
   return data
 
 
