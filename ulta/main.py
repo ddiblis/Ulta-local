@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 from concurrent.futures import ThreadPoolExecutor
 import re
 import time
@@ -14,7 +13,7 @@ if not os.environ.get('LOGURU_LEVEL', None):
   os.environ['LOGURU_LEVEL'] = 'INFO'
 from loguru import logger
 
-from products import Product
+from .products import Product
 
 # Gets categories from main page
 def get_cats():
@@ -121,7 +120,6 @@ def get_details2():
     print(s["link"])
     resp = get(s["link"]).text
     soup = bs(resp, "html.parser")
-    # details = soup.select("div.ProductDetail__productDetails div.ProductDetail__productContent")[0] if soup.select("div.ProductDetail__productDetails div.ProductDetail__productContent") else "No details avaliable"
     if details := soup.select("div.ProductDetail__productDetails div.ProductDetail__productContent"):
       details = details[0]
     else:
@@ -155,9 +153,3 @@ def save_json():
     json.dump(get_prods(), outfile, indent=4, ensure_ascii=False, for_json=True)
   t1 = time.time()
   print(t1 - t0)
-
-
-if __name__ == '__main__':
-  get_details()
-# save_json()
-# print(get_cats())
