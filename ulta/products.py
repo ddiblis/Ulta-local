@@ -33,15 +33,17 @@ class Product:
 
     @property
     def price(self):
-        tag = self.item.select_one("span.pro-new-price") or self.item.select_one(
+        if tag := self.item.select_one("span.pro-new-price") or self.item.select_one(
             "span.regPrice"
-        )
-        return tag.text.strip() if tag else "No price found"
+        ):
+            return tag.text.strip()
+        return "No price found"
 
     @property
     def rating(self):
-        tag = self.item.select_one("label.sr-only")
-        return tag.text if tag else "No rating avaliable"
+        if tag := self.item.select_one("label.sr-only"):
+            return tag.text
+        return "No rating avaliable"
 
     def for_json(self):
         return self.schema.dump(self)
