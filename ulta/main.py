@@ -45,121 +45,37 @@ def get_subcats():
         prods[i[26:]] = raw
     return prods
 
+def run_chunk(n, s):
+    link = s + f"&No={n*25}&Nrpp=25"
+    resp = get(link).text
+    soup = bs(resp, "html.parser")
+    items = soup.select("div.productQvContainer")
+    results = [Product(i) for i in items]
+    for d in results:
+        d.details
+    return results
 
 # Get products info
 def get_prods():
     subs = get_subcats()
-    data = {}
     progress = tqdm()
-
-    def run_chunk(n, s):
-        link = s + f"&No={n*100}&Nrpp=100"
-        resp = get(link).text
-        soup = bs(resp, "html.parser")
-        items = soup.select("div.productQvContainer")
-        return [Product(i) for i in items]
 
     for s in chain(*subs.values()):
         key = re.findall(r"m\/[\S]+\?", s)[0][2:-1]
         with ThreadPoolExecutor(30) as pool:
-            arrs = pool.map(run_chunk, range(30), repeat(s))
+            arrs = pool.map(run_chunk, range(120), repeat(s))
         output = []
+        dup_check = []
         for i in chain(*arrs):
-            if i not in output:
+            if i.link not in dup_check:
+                dup_check.append(i.link)
                 output.append(i)
         progress.update(len(output))
-        data[key] = output
-    return data
-
-
-def pull_details(value, soup):
-    details = (
-        soup.select(
-            "div.ProductDetail__productDetails div.ProductDetail__productContent"
-        )[0]
-        if soup.select(
-            "div.ProductDetail__productDetails div.ProductDetail__productContent"
-        )
-        else "No details avaliable"
-    )
-    description = (
-        details
-        if details == "No details avaliable"
-        else str(details.select_one("p").text).strip()
-        if details.select_one("p")
-        else str(details.text).strip()
-    )
-    instructions = (
-        str(
-            soup.select(
-                "div.ProductDetail__howToUse div.ProductDetail__productContent"
-            )[0].text
-        )
-        if soup.select("div.ProductDetail__howToUse div.ProductDetail__productContent")
-        else "No instructions provided"
-    )
-    instructions_split = (
-        re.findall(r"[\d]\.[\w ]+|[ \w\d,()-]+\.", instructions)
-        if len(re.findall(r"[\d]\.[\w ]+|[ \w\d,()-]+\.", instructions)) > 0
-        else instructions
-    )
-    ingredients = (
-        [
-            i.strip()
-            for i in str(
-                soup.select(
-                    "div.ProductDetail__ingredients div.ProductDetail__productContent"
-                )[0].text
-            ).split(",")
-        ]
-        if soup.select(
-            "div.ProductDetail__ingredients div.ProductDetail__productContent"
-        )
-        else "No ingredients listed"
-    )
-    value.update(
-        {
-            "description": str(description),
-            "ingredients": ingredients,
-            "instructions": instructions_split,
-        }
-    )
-    return value
-
-
-def pull(key, value):
-    logger.debug(key + " " + value["link"])
-    try:
-        resp = requests.get(value["link"]).text
-        soup = bs(resp, "lxml")
-    except requests.exceptions.ConnectionError:
-        print(f"#################ERROR IS HERE {value['link']}")
-    details = pull_details(value, soup)
-    return details
-
-
-def gen_output(data):
-    for key, values in data.items():
-        with ThreadPoolExecutor(7) as pool:
-            products = pool.map(pull, repeat(key), values)
-        yield dict(name=key, products=products)
-
-
-def get_details():
-    data = json.load(open("./data.json"))
-    with open("Ulta.json", "w") as outfile:
-        json.dump(
-            gen_output(data),
-            outfile,
-            ensure_ascii=False,
-            indent=4,
-            iterable_as_array=True,
-        )
-
+        yield dict(name=key, products=output)
 
 def save_json():
     t0 = time.time()
     with open("data.json", "w") as outfile:
-        json.dump(get_prods(), outfile, indent=4, ensure_ascii=False, for_json=True)
+        json.dump(get_prods(), outfile, indent=4, ensure_ascii=False, for_json=True, iterable_as_array=True)
     t1 = time.time()
     print(t1 - t0)

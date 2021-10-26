@@ -1,1 +1,4 @@
 *.pyc
+**.json
+*.json.bak
+*.swp
