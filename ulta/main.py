@@ -62,7 +62,7 @@ def get_prods():
 
     for s in chain(*subs.values()):
         key = re.findall(r"m\/[\S]+\?", s)[0][2:-1]
-        with ThreadPoolExecutor(30) as pool:
+        with ThreadPoolExecutor(10) as pool:
             arrs = pool.map(run_chunk, range(120), repeat(s))
         output = []
         dup_check = []
