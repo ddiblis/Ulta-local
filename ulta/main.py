@@ -134,20 +134,20 @@ def pull(key, value):
         soup = bs(resp, "lxml")
     except requests.exceptions.ConnectionError:
         print(f"#################ERROR IS HERE {value['link']}")
-    details = pull_details(value, soup, resp)
+    details = pull_details(value, soup)
     return details
 
 
 def gen_output(data):
     for key, values in data.items():
-        with ThreadPoolExecutor(5) as pool:
+        with ThreadPoolExecutor(7) as pool:
             products = pool.map(pull, repeat(key), values)
         yield dict(name=key, products=products)
 
 
 def get_details():
     data = json.load(open("./data.json"))
-    with open("test.json", "w") as outfile:
+    with open("Ulta.json", "w") as outfile:
         json.dump(
             gen_output(data),
             outfile,
