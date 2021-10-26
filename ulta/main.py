@@ -68,24 +68,16 @@ def get_prods():
       data[key] = output
   return data
 
-def pull_details(value, soup, resp):
-  details = soup.select("div.ProductDetail__productDetails div.ProductDetail__productContent")[0] if soup.select("div.ProductDetail__productDetails div.ProductDetail__productContent") else "No details avaliable"
-  description = details if details == "No details avaliable" else details.select_one("p").text.strip() if details.select_one("p") else details.text.strip()
-  instructions = soup.select("div.ProductDetail__howToUse div.ProductDetail__productContent")[0].text if soup.select("div.ProductDetail__howToUse div.ProductDetail__productContent") else "No instructions provided"
-  instructions_split = re.findall(r"[\d]\.[\w ]+", instructions) if len(re.findall(r"[\d]\.[\w ]+", instructions)) > 0 else instructions
-  ingredients = [i.strip() for i in soup.select("div.ProductDetail__ingredients div.ProductDetail__productContent")[0].text.split(",")] if soup.select("div.ProductDetail__ingredients div.ProductDetail__productContent") else "No ingredients listed"
-  value.update({'description': str(description),
-          'ingredients': str(ingredients),
-          'instructions': str(instructions_split),})
 
-  reg = re.findall(r">([\d\w \.,:&;()-]+)<(ul|br)>[ ]*<[l|u]", resp)
-  titles = [r for r in [i[0].strip() for i in reg] if r]
-  features = str(details.select("ul")) if details != "No details avaliable" else "No features avaliable"
-  featuresif = "No features avaliable" if len(features) > 0 else features
-  if featuresif != "No features avaliable":
-    [value.update({titles[i] if reg else "Features": [str(r.text) for r in features[i].select("li")]}) for i in range(len(features))]
-  else:
-    value.update({"features": features})
+def pull_details(value, soup):
+  details = soup.select("div.ProductDetail__productDetails div.ProductDetail__productContent")[0] if soup.select("div.ProductDetail__productDetails div.ProductDetail__productContent") else "No details avaliable"
+  description = details if details == "No details avaliable" else str(details.select_one("p").text).strip() if details.select_one("p") else str(details.text).strip()
+  instructions = str(soup.select("div.ProductDetail__howToUse div.ProductDetail__productContent")[0].text) if soup.select("div.ProductDetail__howToUse div.ProductDetail__productContent") else "No instructions provided"
+  instructions_split = re.findall(r"[\d]\.[\w ]+|[ \w\d,()-]+\.", instructions) if len(re.findall(r"[\d]\.[\w ]+|[ \w\d,()-]+\.", instructions)) > 0 else instructions
+  ingredients = [i.strip() for i in str(soup.select("div.ProductDetail__ingredients div.ProductDetail__productContent")[0].text).split(",")] if soup.select("div.ProductDetail__ingredients div.ProductDetail__productContent") else "No ingredients listed"
+  value.update({'description': str(description),
+          'ingredients': ingredients,
+          'instructions': instructions_split,})
   return value
 
 def pull(key, value):
@@ -100,7 +92,7 @@ def pull(key, value):
 
 def gen_output(data):
   for key, values in data.items():
-    with ThreadPoolExecutor(10) as pool:
+    with ThreadPoolExecutor(5) as pool:
       products = pool.map(pull, repeat(key), values)
     yield dict(name=key, products=products)
 
@@ -108,44 +100,6 @@ def get_details():
   data = json.load(open('./data.json'))
   with open('test.json', 'w') as outfile:
     json.dump(gen_output(data), outfile, ensure_ascii=False, indent=4, iterable_as_array=True)
-
-
-def get_details2():
-  single_item = {}
-  full = {}
-  with open('./data.json') as f:
-    data = json.load(f)
-    single_item = data["tools-brushes-hair-styling-tools"]
-  for s in single_item:
-    print(s["link"])
-    resp = get(s["link"]).text
-    soup = bs(resp, "html.parser")
-    if details := soup.select("div.ProductDetail__productDetails div.ProductDetail__productContent"):
-      details = details[0]
-    else:
-      details = "No details avaliable"
-    description = details if details == "No details avaliable" else details.select_one("p").text.strip() if details.select_one("p") else details.text.strip()
-    instructions = soup.select("div.ProductDetail__howToUse div.ProductDetail__productContent")[0].text if soup.select("div.ProductDetail__howToUse div.ProductDetail__productContent") else "No instructions provided"
-    instructions_split = re.findall(r"[\d]\.[\w ]+", instructions) if len(re.findall(r"[\d]\.[\w ]+", instructions)) > 0 else instructions
-    ingredients = [i.strip() for i in soup.select("div.ProductDetail__ingredients div.ProductDetail__productContent")[0].text.split(",")] if soup.select("div.ProductDetail__ingredients div.ProductDetail__productContent") else "No ingredients listed"
-    s.update({'description': description,
-            'ingredients': ingredients,
-            'instructions': instructions_split,})
-    full.update({s["link"]: s})
-    reg = re.findall(r">([\d\w \.,:&;()-]+)<(ul|br)>[ ]*<[l|u]", resp)
-    titles = [r for r in [i[0].strip() for i in reg] if r]
-    features = details.select("ul") if details != "No details avaliable" else "No features avaliable"
-    if features != "No features avaliable":
-      [s.update({titles[i] if reg else "Features": [r.text for r in features[i].select("li")]}) for i in range(len(features))]
-    else:
-      s.update({"features": features})
-
-  with open('test.json', 'w') as outfile:
-    json.dump(full, outfile, ensure_ascii=False, indent=4)
-
-
-
-
 
 def save_json():
   t0 = time.time()
