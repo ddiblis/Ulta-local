@@ -1,7 +1,8 @@
 #!/usr/bin/env python
-from ulta.main import save_json
+from ulta.main import save_json, test
 
 if __name__ == '__main__':
-  save_json()
+  test()
+  # save_json()
   # get_details()
 # print(get_cats())

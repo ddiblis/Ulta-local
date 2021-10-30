@@ -11,6 +11,9 @@ simplejson = "^3.17.5"
 lxml = "^4.6.3"
 loguru = "^0.5.3"
 
+[tool.poetry.scripts]
+ulta = 'ulta.main:save_json'
+
 [tool.poetry.dev-dependencies]
 black = "^21.9b0"
 
